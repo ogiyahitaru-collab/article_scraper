@@ -1,11 +1,15 @@
-FROM python:3.11-slim
+FROM python:3.8-slim
 
 WORKDIR /app
-ENV PYTHONPATH=/app
 
-COPY requirements.txt ./
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+RUN pip install transformers torch
 
-CMD ["python", "src/main.py"]
+VOLUME /app/models
+VOLUME /app/data
+
+COPY . /app
+
+CMD ["python", "gpt_model.py"]
