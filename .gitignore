@@ -25,3 +25,13 @@ log.txt
 *.rej
 *.swp
 *.DS_Store
+
+# safety
+.env
+.env.local
+*.log
+.venv/
+.venv-tools/
+__pycache__/
+*.bak
+*.tsv
