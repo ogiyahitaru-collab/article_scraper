@@ -13,4 +13,3 @@ if response.status_code == 200:
     print(soup.get_text())
 else:
     print(f"エラー: {response.status_code}")
-

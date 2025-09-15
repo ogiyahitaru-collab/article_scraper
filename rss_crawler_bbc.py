@@ -7,10 +7,12 @@ import json
 RSS_FEED_URL = "http://feeds.bbci.co.uk/news/world/rss.xml"
 OUTPUT_FILE = "../output/news.json"
 
+
 def fetch_rss():
     response = requests.get(RSS_FEED_URL)
     response.raise_for_status()
     return response.content
+
 
 def parse_rss(xml_data):
     root = ET.fromstring(xml_data)
@@ -21,6 +23,7 @@ def parse_rss(xml_data):
         link = item.find("link").text
         articles.append({"title": title, "url": link})
     return articles
+
 
 def fetch_article_content(url):
     try:
@@ -34,6 +37,7 @@ def fetch_article_content(url):
         print(f"❌ Error fetching article: {e}")
         return None
 
+
 def save_to_json(data):
     now = datetime.datetime.now().isoformat()
     for entry in data:
@@ -41,6 +45,7 @@ def save_to_json(data):
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     print(f"\n✅ 保存完了: {OUTPUT_FILE}")
+
 
 def main():
     print("🌐 BBC RSSを取得中...")
@@ -50,12 +55,15 @@ def main():
     for i, article in enumerate(articles, 1):
         print(f"\n--- [{i}/{len(articles)}] {article['title']}")
         content = fetch_article_content(article["url"])
-        results.append({
-            "title": article["title"],
-            "url": article["url"],
-            "content_snippet": content[:200] if content else None
-        })
+        results.append(
+            {
+                "title": article["title"],
+                "url": article["url"],
+                "content_snippet": content[:200] if content else None,
+            }
+        )
     save_to_json(results)
+
 
 if __name__ == "__main__":
     main()

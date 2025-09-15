@@ -9,19 +9,20 @@ notion = Client(auth=os.getenv("NOTION_API_KEY"))
 database_id = os.getenv("NOTION_DATABASE_ID")
 url_prop_name = os.getenv("NOTION_PROP_URL")
 
+
 def get_all_pages():
     pages = []
     next_cursor = None
     while True:
         response = notion.databases.query(
-            database_id=database_id,
-            start_cursor=next_cursor
+            database_id=database_id, start_cursor=next_cursor
         )
         pages.extend(response.get("results", []))
         next_cursor = response.get("next_cursor")
         if not next_cursor:
             break
     return pages
+
 
 def find_duplicate_pages(pages):
     url_map = defaultdict(list)
@@ -31,12 +32,13 @@ def find_duplicate_pages(pages):
         if not url:
             continue
         url_map[url].append(page)
-    
+
     duplicates = []
     for url, entries in url_map.items():
         if len(entries) > 1:
             duplicates.extend(entries[1:])  # 最初の1件は残す
     return duplicates
+
 
 def delete_duplicates(duplicate_pages):
     for page in duplicate_pages:
@@ -44,6 +46,7 @@ def delete_duplicates(duplicate_pages):
         url = page.get("properties", {}).get(url_prop_name, {}).get("url")
         print(f"🗑️ Deleting duplicate for URL: {url}")
         notion.pages.update(page_id=page_id, archived=True)
+
 
 if __name__ == "__main__":
     all_pages = get_all_pages()

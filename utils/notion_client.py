@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
 NOTION_TOKEN = os.environ.get("NOTION_TOKEN") or os.environ.get("NOTION_API_KEY")
-DATABASE_ID  = os.environ.get("NOTION_DATABASE_ID") or os.environ.get("NOTION_DB_ID")
+DATABASE_ID = os.environ.get("NOTION_DATABASE_ID") or os.environ.get("NOTION_DB_ID")
 
 HEADERS = {
     "Authorization": f"Bearer {NOTION_TOKEN}" if NOTION_TOKEN else "",
@@ -11,10 +11,13 @@ HEADERS = {
     "Notion-Version": "2022-06-28",
 }
 
+
 def _clean(text: str) -> str:
-    if not text: return ""
-    text = re.sub(r'\s+', ' ', text).strip()
+    if not text:
+        return ""
+    text = re.sub(r"\s+", " ", text).strip()
     return text[:2000]
+
 
 def _to_iso8601(dt_str: str | None) -> str | None:
     """
@@ -38,6 +41,7 @@ def _to_iso8601(dt_str: str | None) -> str | None:
     except Exception:
         return None
 
+
 def add_to_notion(art: dict) -> None:
     """
     art: {
@@ -53,9 +57,9 @@ def add_to_notion(art: dict) -> None:
         return
 
     title = _clean(art.get("title") or "No Title")
-    url   = art.get("url") or ""
-    desc  = _clean(art.get("text") or "")
-    src   = _clean(art.get("source") or "")
+    url = art.get("url") or ""
+    desc = _clean(art.get("text") or "")
+    src = _clean(art.get("source") or "")
     published = art.get("published")
     iso_published = _to_iso8601(published)
 
@@ -78,7 +82,9 @@ def add_to_notion(art: dict) -> None:
     if src:
         payload["properties"]["Source"] = {"rich_text": [{"text": {"content": src}}]}
 
-    r = requests.post("https://api.notion.com/v1/pages", headers=HEADERS, json=payload, timeout=20)
+    r = requests.post(
+        "https://api.notion.com/v1/pages", headers=HEADERS, json=payload, timeout=20
+    )
     if r.status_code >= 300:
         try:
             msg = r.json()

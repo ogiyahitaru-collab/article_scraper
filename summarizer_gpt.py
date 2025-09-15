@@ -6,6 +6,7 @@ from datetime import datetime
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+
 def gpt_summarize(text, lang="ja"):
     prompt = f"""
 以下はニュース記事です。これをビジネスパーソン向けに3〜4文で要約してください。
@@ -19,12 +20,13 @@ def gpt_summarize(text, lang="ja"):
         model="gpt-4o",
         messages=[
             {"role": "system", "content": "あなたはプロのニュース要約者です。"},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": prompt},
         ],
-        temperature=0.5
+        temperature=0.5,
     )
 
     return response.choices[0].message.content.strip()
+
 
 def summarize_articles(articles):
     results = []
@@ -32,11 +34,13 @@ def summarize_articles(articles):
         print(f"🧠 GPT要約中: {i}/{len(articles)}")
         content = article.get("content") or article.get("summary") or ""
         summary = gpt_summarize(content)
-        results.append({
-            "title": article.get("title", f"Untitled {i}"),
-            "url": article.get("url"),
-            "summary_ja": summary,
-            "published_at": datetime.now().isoformat(),
-            "tags": ["GPT要約"]
-        })
+        results.append(
+            {
+                "title": article.get("title", f"Untitled {i}"),
+                "url": article.get("url"),
+                "summary_ja": summary,
+                "published_at": datetime.now().isoformat(),
+                "tags": ["GPT要約"],
+            }
+        )
     return results

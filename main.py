@@ -30,15 +30,22 @@ TYPE_RULES = [
     (r"投資|新工場|設備投資|増産|ライン新設|資本支出|capex", "設備投資"),
     (r"買収|売却|M&A|資本提携|子会社化|合併", "M&A"),
     (r"事故|火災|爆発|不祥事|データ改ざん|品質問題|リコール", "事故・不祥事"),
-    (r"規制|関税|関税リスク|制裁|輸出管理|反ダンピング|環境規制|炭素税|CBAM", "規制・政策"),
+    (
+        r"規制|関税|関税リスク|制裁|輸出管理|反ダンピング|環境規制|炭素税|CBAM",
+        "規制・政策",
+    ),
     (r"新製品|新素材|発表|披露|供給開始|受注", "新製品/受注"),
 ]
 
 IMPACT_RULES = [
-    (r"下方修正|停止|停止へ|操業停止|爆発|大幅下落|大幅増税|制裁強化|関税(引き上げ|強化)", "高"),
+    (
+        r"下方修正|停止|停止へ|操業停止|爆発|大幅下落|大幅増税|制裁強化|関税(引き上げ|強化)",
+        "高",
+    ),
     (r"上方修正|増産|新工場|大型投資|大型受注|合弁設立|大型M&A", "高"),
     (r"調査開始|検討|方針|一部報道|観測", "中"),
 ]
+
 
 def infer_category(rules, text):
     for pat, label in rules:
@@ -46,14 +53,16 @@ def infer_category(rules, text):
             return label
     return None
 
+
 def infer_tags(title, body, keyword=""):
     base = " ".join([title or "", keyword or "", (body or "")[:2000]])
     industry = infer_category(INDUSTRY_RULES, base) or "未分類"
-    typ      = infer_category(TYPE_RULES,      base) or "その他"
-    impact   = infer_category(IMPACT_RULES,    base) or "中"
+    typ = infer_category(TYPE_RULES, base) or "その他"
+    impact = infer_category(IMPACT_RULES, base) or "中"
     # 「選択」に入れる合成タグ（Selectは1値のみ）
     select_value = f"業界:{industry}｜タイプ:{typ}｜影響度:{impact}"
     return select_value, {"industry": industry, "type": typ, "impact": impact}
+
 
 # ====== ユーティリティ ======
 def load_sent_log():
@@ -65,25 +74,29 @@ def load_sent_log():
             return set()
     return set()
 
-def save_sent_log(urls:set):
+
+def save_sent_log(urls: set):
     os.makedirs(os.path.dirname(SENT_LOG_PATH), exist_ok=True)
     with open(SENT_LOG_PATH, "w", encoding="utf-8") as f:
         json.dump(sorted(list(urls)), f, ensure_ascii=False, indent=2)
 
+
 def jst_today():
     return datetime.now(timezone(timedelta(hours=9))).date().isoformat()
 
-def to_ymd(iso_like:str|None) -> str:
+
+def to_ymd(iso_like: str | None) -> str:
     if not iso_like:
         return jst_today()
     try:
-        iso_like = iso_like.replace("Z","+00:00")
+        iso_like = iso_like.replace("Z", "+00:00")
         dt = datetime.fromisoformat(iso_like)
         return dt.astimezone(timezone(timedelta(hours=9))).date().isoformat()
     except Exception:
         return jst_today()
 
-def summarize_text(title:str, body:str) -> str:
+
+def summarize_text(title: str, body: str) -> str:
     body = (body or "").strip()
     if ai_summarize and len(body) >= 40:
         try:
@@ -91,36 +104,43 @@ def summarize_text(title:str, body:str) -> str:
         except Exception:
             pass
     lead = (body.split("\n")[0] if body else title) or "要約なし"
-    return (lead[:200] + ("…" if len(lead)>200 else ""))
+    return lead[:200] + ("…" if len(lead) > 200 else "")
 
-def resolve_bing_apiclick(url:str) -> str:
+
+def resolve_bing_apiclick(url: str) -> str:
     try:
-        resp = requests.get(url, headers={"User-Agent":"Mozilla/5.0"}, timeout=12, allow_redirects=True)
+        resp = requests.get(
+            url, headers={"User-Agent": "Mozilla/5.0"}, timeout=12, allow_redirects=True
+        )
         return resp.url
     except Exception:
         return url
 
-def iter_bing_news_urls(keyword:str, limit:int):
+
+def iter_bing_news_urls(keyword: str, limit: int):
     q = requests.utils.quote(keyword)
     rss = f"https://www.bing.com/news/search?q={q}+site:reuters.com&format=rss"
     feed = feedparser.parse(rss)
     seen = set()
     for e in feed.entries:
         print("DEBUG ENTRY FULL:", e)
-        if len(seen) >= limit: break
+        if len(seen) >= limit:
+            break
         u = e.link
-        if "sitemap" in u.lower(): continue
+        if "sitemap" in u.lower():
+            continue
         u = resolve_bing_apiclick(u)
-        if "reuters.com" not in u: continue
-        if u in seen: continue
+        if "reuters.com" not in u:
+            continue
+        if u in seen:
+            continue
         seen.add(u)
         yield u
 
+
 # ====== メイン処理 ======
-def process_url(url:str, sent:set, keyword:str=""):
+def process_url(url: str, sent: set, keyword: str = ""):
     import feedparser
-
-
 
     # --- RSS対応 ---
 
@@ -137,13 +157,9 @@ def process_url(url:str, sent:set, keyword:str=""):
         for e in feed.entries:
 
             art = {
-
                 "url": getattr(e, "link", None),
-
                 "title": getattr(e, "title", "No Title"),
-
-                "published": getattr(e, "published", None)
-
+                "published": getattr(e, "published", None),
             }
 
             print("✅ RSS記事:", art["title"])
@@ -158,8 +174,8 @@ def process_url(url:str, sent:set, keyword:str=""):
     art = scrape_single_article(url)  # {url/final_url, title, text, published_at?}
     final_url = art.get("final_url") or art.get("url") or url
     title = art.get("title") or "No Title"
-    text  = art.get("text")  or ""
-    pub   = to_ymd(art.get("published_at"))
+    text = art.get("text") or ""
+    pub = to_ymd(art.get("published_at"))
 
     # サマリ＆タグ
     summary = summarize_text(title, text)
@@ -171,12 +187,13 @@ def process_url(url:str, sent:set, keyword:str=""):
         url=final_url,
         summary=f"{summary}\n\n[自動タグ] 業界:{tag_detail['industry']}｜タイプ:{tag_detail['type']}｜影響度:{tag_detail['impact']}",
         date_str=pub,
-        tag_name=select_value
+        tag_name=select_value,
     )
     if ok:
         sent.add(final_url)
         save_sent_log(sent)
     return ok
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -200,16 +217,12 @@ def main():
 
         if feed.entries:
 
-            for e in feed.entries[:args.limit]:
+            for e in feed.entries[: args.limit]:
 
                 art = {
-
                     "url": getattr(e, "link", None),
-
                     "title": getattr(e, "title", "No Title"),
-
-                    "published": getattr(e, "published", None)
-
+                    "published": getattr(e, "published", None),
                 }
 
                 print("✅ Bing RSS記事:", art["title"])
@@ -235,6 +248,7 @@ def main():
         return
 
     parser.print_help()
+
 
 if __name__ == "__main__":
     main()

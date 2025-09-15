@@ -9,12 +9,13 @@ OUTPUT_FILE = "../output/news.json"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/115.0.0.0 Safari/537.36"
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/115.0.0.0 Safari/537.36"
 }
 
 session = requests.Session()
 session.headers.update(HEADERS)
+
 
 def fetch(url):
     try:
@@ -27,6 +28,7 @@ def fetch(url):
     except Exception as e:
         print(f"❌ その他エラー: {e}")
     return None
+
 
 def crawl():
     try:
@@ -43,11 +45,13 @@ def crawl():
         for attempt in range(1, 4):
             html = fetch(url)
             if html:
-                results.append({
-                    "url": url,
-                    "fetched_at": datetime.datetime.now().isoformat(),
-                    "content_snippet": html[:200]
-                })
+                results.append(
+                    {
+                        "url": url,
+                        "fetched_at": datetime.datetime.now().isoformat(),
+                        "content_snippet": html[:200],
+                    }
+                )
                 break
             else:
                 wait = random.randint(10, 30)
@@ -55,16 +59,19 @@ def crawl():
                 time.sleep(wait)
         else:
             print(f"❌ 最終失敗: {url}")
-            results.append({
-                "url": url,
-                "fetched_at": datetime.datetime.now().isoformat(),
-                "content_snippet": None
-            })
+            results.append(
+                {
+                    "url": url,
+                    "fetched_at": datetime.datetime.now().isoformat(),
+                    "content_snippet": None,
+                }
+            )
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
     print(f"\n✅ 完了：{OUTPUT_FILE} に保存しました")
+
 
 if __name__ == "__main__":
     crawl()

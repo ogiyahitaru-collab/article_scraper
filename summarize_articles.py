@@ -11,14 +11,18 @@ load_dotenv()
 # APIキーを読み込んでクライアント初期化
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+
 def summarize(text):
-    prompt = f"Summarize the following English news article in 2 short sentences:\n\n{text}" 
+    prompt = (
+        f"Summarize the following English news article in 2 short sentences:\n\n{text}"
+    )
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.5
+        temperature=0.5,
     )
     return response.choices[0].message.content.strip()
+
 
 def main():
     input_path = "../output/news.json"
@@ -31,17 +35,20 @@ def main():
     summarized = []
     for article in articles:
         summary_en = summarize(article["content_snippet"])
-        summarized.append({
-            "title": article["title"],
-            "link": article.get("link", "リンク不明"),
-            "summary_en": summary_en
-        })
+        summarized.append(
+            {
+                "title": article["title"],
+                "link": article.get("link", "リンク不明"),
+                "summary_en": summary_en,
+            }
+        )
 
     # JSON保存
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(summarized, f, indent=2, ensure_ascii=False)
 
     print(f"✅ 要約完了：{output_path} に保存しました")
+
 
 if __name__ == "__main__":
     main()

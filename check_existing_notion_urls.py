@@ -8,6 +8,7 @@ notion = Client(auth=os.getenv("NOTION_API_KEY"))
 database_id = os.getenv("NOTION_DATABASE_ID")
 url_prop_name = os.getenv("NOTION_PROP_URL")
 
+
 def get_existing_notion_urls():
     urls = set()
     query = notion.databases.query(database_id=database_id)
@@ -17,6 +18,7 @@ def get_existing_notion_urls():
         if url_prop:
             urls.add(url_prop)
     return urls
+
 
 if __name__ == "__main__":
     urls = get_existing_notion_urls()

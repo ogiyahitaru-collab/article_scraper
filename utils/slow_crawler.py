@@ -5,8 +5,8 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 # ===== 基本設定 =====
-MIN_DELAY = 20       # 最小待機秒（各リクエスト間）
-MAX_DELAY = 45       # 最大待機秒（各リクエスト間）
+MIN_DELAY = 20  # 最小待機秒（各リクエスト間）
+MAX_DELAY = 45  # 最大待機秒（各リクエスト間）
 HARD_BACKOFF_4XX = (120, 300)  # 4xx系の時にまとめて待つ秒（min,max）
 MAX_RETRIES = 3
 TIMEOUT = 30
@@ -26,13 +26,19 @@ HEADERS_BASE = {
 
 COMMON_SELECTORS = [
     # よくある本文の入れ物（上から順番に試す）
-    "article",                         # 汎用
+    "article",  # 汎用
     "[data-testid='Body']",
-    "div.article-body", "div.ArticleBody",
-    "div.story-content", "div.paywall-article", "div#article-body",
+    "div.article-body",
+    "div.ArticleBody",
+    "div.story-content",
+    "div.paywall-article",
+    "div#article-body",
     "div[itemprop='articleBody']",
-    "section#content", "main#content",
-    ".post-content", ".entry-content", ".c-article__body",
+    "section#content",
+    "main#content",
+    ".post-content",
+    ".entry-content",
+    ".c-article__body",
 ]
 
 # ===== Notion（任意） =====
@@ -43,14 +49,17 @@ use_notion = bool(NOTION_TOKEN and NOTION_DB)
 if use_notion:
     try:
         from notion_client import Client as NotionClient
+
         notion = NotionClient(auth=NOTION_TOKEN)
     except Exception:
         use_notion = False
+
 
 def safe_sleep(t):
     # 秒数を見えるログ
     print(f"⏳ wait {int(t)}s …")
     time.sleep(t)
+
 
 def fetch_html(url):
     session = requests.Session()
@@ -58,13 +67,15 @@ def fetch_html(url):
     headers["User-Agent"] = random.choice(USER_AGENTS)
 
     last_exc = None
-    for attempt in range(1, MAX_RETRIES+1):
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
             resp = session.get(url, headers=headers, timeout=TIMEOUT)
             status = resp.status_code
 
             # 正常
-            if 200 <= status < 300 and "text/html" in resp.headers.get("Content-Type", ""):
+            if 200 <= status < 300 and "text/html" in resp.headers.get(
+                "Content-Type", ""
+            ):
                 return resp.text
 
             # 429/403: 強めバックオフ
@@ -74,17 +85,20 @@ def fetch_html(url):
                 safe_sleep(backoff)
             else:
                 # 4xx/5xxその他 → 軽い指数バックオフ
-                backoff = min(60, 2 ** attempt * 3 + random.uniform(0, 3))
-                print(f"⚠ status {status} (attempt {attempt}) -> backoff {int(backoff)}s")
+                backoff = min(60, 2**attempt * 3 + random.uniform(0, 3))
+                print(
+                    f"⚠ status {status} (attempt {attempt}) -> backoff {int(backoff)}s"
+                )
                 safe_sleep(backoff)
 
         except requests.RequestException as e:
             last_exc = e
-            backoff = min(60, 2 ** attempt * 3 + random.uniform(0, 3))
+            backoff = min(60, 2**attempt * 3 + random.uniform(0, 3))
             print(f"⚠ error {e} (attempt {attempt}) -> backoff {int(backoff)}s")
             safe_sleep(backoff)
 
     raise RuntimeError(f"Failed to fetch: {url} ({last_exc})")
+
 
 def extract_text(html):
     soup = BeautifulSoup(html, "html.parser")
@@ -101,7 +115,9 @@ def extract_text(html):
         node = soup.select_one(css)
         if node and node.get_text(strip=True):
             # 過剰を削る
-            paragraphs = [p.get_text(" ", strip=True) for p in node.find_all(["p","li"])]
+            paragraphs = [
+                p.get_text(" ", strip=True) for p in node.find_all(["p", "li"])
+            ]
             if not paragraphs:
                 paragraphs = [node.get_text(" ", strip=True)]
             body_text = "\n".join(paragraphs).strip()
@@ -110,6 +126,7 @@ def extract_text(html):
 
     # 何も取れなければ空返し
     return title, body_text
+
 
 def post_to_notion(title, url, summary):
     if not use_notion:
@@ -127,13 +144,21 @@ def post_to_notion(title, url, summary):
     except Exception as e:
         print(f"🟠 Notion 登録失敗: {e}")
 
+
 def main():
     urls_path = pathlib.Path("urls.txt")
-    urls = [line.strip() for line in urls_path.read_text(encoding="utf-8").splitlines() if line.strip() and not line.strip().startswith("#")]
-    out_dir = pathlib.Path("out"); out_dir.mkdir(exist_ok=True)
+    urls = [
+        line.strip()
+        for line in urls_path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
+    out_dir = pathlib.Path("out")
+    out_dir.mkdir(exist_ok=True)
     out_file = out_dir / "news.jsonl"
 
-    print(f"🔁 {len(urls)}本をゆっくり巡回します（{MIN_DELAY}-{MAX_DELAY}s間隔 + バックオフ）")
+    print(
+        f"🔁 {len(urls)}本をゆっくり巡回します（{MIN_DELAY}-{MAX_DELAY}s間隔 + バックオフ）"
+    )
 
     for idx, url in enumerate(urls, 1):
         print(f"\n——— [{idx}/{len(urls)}] {url}")
@@ -146,7 +171,9 @@ def main():
             title, body = extract_text(html)
 
             if not body:
-                print("❌ 本文が見つかりませんでした（ページが高度に動的 or 制限中の可能性）")
+                print(
+                    "❌ 本文が見つかりませんでした（ページが高度に動的 or 制限中の可能性）"
+                )
                 # デバッグ用にHTML保存
                 dbg = out_dir / f"page_source_{idx}.html"
                 dbg.write_text(html, encoding="utf-8", errors="ignore")
@@ -174,6 +201,7 @@ def main():
 
     print(f"\n✅ 完了: {out_file} に追記しました")
     print("   （次回は urls.txt を更新して同じスクリプトをもう一度実行するだけ）")
+
 
 if __name__ == "__main__":
     main()

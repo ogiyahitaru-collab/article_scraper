@@ -8,8 +8,9 @@ NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 HEADERS = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
     "Content-Type": "application/json",
-    "Notion-Version": "2022-06-28"
+    "Notion-Version": "2022-06-28",
 }
+
 
 def post_to_notion(title, url, summary, date_str, tag_name="重要"):
     """記事データをNotionに登録"""
@@ -22,32 +23,16 @@ def post_to_notion(title, url, summary, date_str, tag_name="重要"):
     payload = {
         "parent": {"database_id": NOTION_DATABASE_ID},
         "properties": {
-            "title": {
-                "title": [
-                    {"text": {"content": title}}
-                ]
-            },
-            "URL": {
-                "url": url
-            },
-            "summary_ja": {
-                "rich_text": [
-                    {"text": {"content": summary}}
-                ]
-            },
-            "日付": {
-                "date": {"start": start_date}
-            },
-            "選択": {
-                "select": {"name": tag_name}
-            }
-        }
+            "title": {"title": [{"text": {"content": title}}]},
+            "URL": {"url": url},
+            "summary_ja": {"rich_text": [{"text": {"content": summary}}]},
+            "日付": {"date": {"start": start_date}},
+            "選択": {"select": {"name": tag_name}},
+        },
     }
 
     res = requests.post(
-        "https://api.notion.com/v1/pages",
-        headers=HEADERS,
-        json=payload
+        "https://api.notion.com/v1/pages", headers=HEADERS, json=payload
     )
 
     if res.status_code == 200:

@@ -5,6 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import sys, time, os
 
+
 def extract_text(driver):
     # ページ読み込みを少し待つ
     WebDriverWait(driver, 15).until(
@@ -45,6 +46,7 @@ def extract_text(driver):
 
     return "\n\n".join(texts).strip()
 
+
 def main():
     url = input("📰 記事URLを入力してください：").strip()
 
@@ -63,7 +65,8 @@ def main():
         driver.get(url)
         # 軽くスクロールして遅延読込を促す
         for y in (300, 900, 1500):
-            driver.execute_script(f"window.scrollTo(0,{y});"); time.sleep(0.6)
+            driver.execute_script(f"window.scrollTo(0,{y});")
+            time.sleep(0.6)
 
         text = extract_text(driver)
 
@@ -81,6 +84,7 @@ def main():
             print("📄 取得したHTML: page_source.html を確認してください。")
     finally:
         driver.quit()
+
 
 if __name__ == "__main__":
     main()
