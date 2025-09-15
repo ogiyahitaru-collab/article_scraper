@@ -1,0 +1,4 @@
+github:
+  token: ""
+  repo: "your-org/your-repo"
+  interval_sec: 120

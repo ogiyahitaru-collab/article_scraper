@@ -1,0 +1,27 @@
+# Python キャッシュ
+__pycache__/
+*.pyc
+
+# 仮想環境
+.venv/
+.env
+.env.local
+
+# ログや一時ファイル
+*.log
+*.bak
+*.tsv
+.buildxcache/
+dry.log
+log.txt
+
+# Dockerキャッシュ
+@docker/
+
+# 追加：バックアップ・生成物
+*.bak
+*.bak.*
+*.orig
+*.rej
+*.swp
+*.DS_Store

@@ -1,0 +1,90 @@
+import datetime
+import re
+import requests
+from bs4 import BeautifulSoup
+
+COMMON_HEADERS = {
+    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                   "AppleWebKit/537.36 (KHTML, like Gecko) "
+                   "Chrome/122.0.0.0 Safari/537.36"),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9,ja;q=0.8",
+    "Connection": "keep-alive"
+}
+
+def _fetch_html(url, timeout=20):
+    r = requests.get(url, timeout=timeout, headers=COMMON_HEADERS, allow_redirects=True)
+    # Reutersなどで403/401が出る場合は例外を投げて上位でAMP等にフォールバック
+    if r.status_code >= 400:
+        raise requests.HTTPError(f"{r.status_code} {r.reason}", response=r)
+    return r.text
+
+def _to_amp(url: str) -> str:
+    # 末尾に /amp を付ける（Reuters等で有効）
+    if url.endswith("/"):
+        return url + "amp"
+    if not url.endswith("/amp"):
+        return url + "/amp"
+    return url
+
+def scrape_single_article(url: str):
+    """
+    指定URLの単発記事を取得して辞書で返す。
+    期待キー: title, url, published_at, content, tags
+    """
+    html = None
+    tried_amp = False
+    try:
+        html = _fetch_html(url)
+    except requests.HTTPError as e:
+        # Reuters系はAMP版へフォールバック
+        if ("reuters.com" in url) and (e.response is not None) and (e.response.status_code in (401,403)):
+            amp_url = _to_amp(url)
+            tried_amp = True
+            html = _fetch_html(amp_url)
+        else:
+            raise
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    # タイトル抽出
+    title = None
+    if soup.title:
+        title = soup.title.get_text(strip=True)
+    if not title:
+        h1 = soup.find("h1")
+        title = h1.get_text(strip=True) if h1 else url
+
+    # 本文抽出（一般化。必要に応じてサイト別に強化）
+    paragraphs = [p.get_text(" ", strip=True) for p in soup.find_all("p")]
+    content = "\n".join([p for p in paragraphs if p])
+
+    # 発行日（ページ内の time 要素や meta をざっくり探索、なければUTC現在時刻）
+    published_at = None
+    time_el = soup.find("time")
+    if time_el and (time_el.get("datetime") or time_el.get_text(strip=True)):
+        published_at = time_el.get("datetime") or time_el.get_text(strip=True)
+
+    if not published_at:
+        # meta[name='article:published_time'] など
+        meta = soup.find("meta", attrs={"property": "article:published_time"}) or \
+               soup.find("meta", attrs={"name": "article:published_time"})
+        if meta and meta.get("content"):
+            published_at = meta["content"]
+
+    if not published_at:
+        published_at = datetime.datetime.utcnow().isoformat() + "Z"
+
+    # 返却（AMPへ切替済みなら実URLはAMPの方を記録）
+    final_url = _to_amp(url) if tried_amp else url
+    return {
+        "title": title,
+        "url": final_url,
+        "published_at": published_at,
+        "content": content,
+        "tags": []
+    }
+
+# 既存の「最新取得」系がある前提のプロジェクトではこの関数名がなくてもOK（main.py側でURL直指定を使う）
+def scrape_latest_articles(limit=1):
+    return []

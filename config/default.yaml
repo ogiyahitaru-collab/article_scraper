@@ -1,0 +1,13 @@
+io:
+  out_dir: "article_out"    # 出力フォルダは統一
+  archive_dir: "archive"    # バックアップ先
+  log_file: "log.txt"       # ログ保存先
+
+notion:
+  token: "${NOTION_TOKEN}"  # 環境変数から読む
+  database_id: "${NOTION_DB}"
+
+pipeline:
+  - fetch
+  - dedup
+  - publish
